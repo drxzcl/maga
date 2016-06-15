@@ -10,7 +10,7 @@ import bencoder
 
 
 def proper_infohash(infohash):
-    if isinstance(infohash, bytes):
+    if isinstance(infohash, bytes):    
         # Convert bytes to hex
         infohash = binascii.hexlify(infohash).decode('utf-8')
     return infohash.upper()
@@ -54,15 +54,13 @@ class Maga(asyncio.DatagramProtocol):
     def stop(self):
         self.__running = False
         self.loop.call_later(self.interval, self.loop.stop)
-
-    async def auto_find_nodes(self):
-        self.__running = True
-        while self.__running:
-            await asyncio.sleep(self.interval)
-            for node in self.bootstrap_nodes:
-                self.find_node(addr=node)
-
-    def run(self, port=6881):
+        
+    def start(self, port=6881):
+        """
+            Start Maga and return immediately.
+            The caller is responsible for running the
+            event loop.
+        """
         coro = self.loop.create_datagram_endpoint(
                 lambda: self, local_addr=('0.0.0.0', port)
         )
@@ -80,6 +78,16 @@ class Maga(asyncio.DatagramProtocol):
             self.find_node(addr=node, node_id=self.node_id)
 
         asyncio.ensure_future(self.auto_find_nodes(), loop=self.loop)
+
+    async def auto_find_nodes(self):
+        self.__running = True
+        while self.__running:
+            await asyncio.sleep(self.interval)
+            for node in self.bootstrap_nodes:
+                self.find_node(addr=node)
+
+    def run(self, port=6881):        
+        self.start(port)
         self.loop.run_forever()
         self.loop.close()
 
